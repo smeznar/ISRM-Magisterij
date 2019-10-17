@@ -6,7 +6,8 @@
         {
             "label": "sml run",
             "type": "shell",
-            "command": "cd /Users/smeznar/Projects/ISRM-Magisterij/FunkcijskoProgramiranje/vaje/ && sml \"${file}\""
+            "command": "cd /Users/smeznar/Projects/ISRM-Magisterij/FunkcijskoProgramiranje/vaje/ && sml \"${file}\"",
+            "problemMatcher": []
         },
         {
             "label": "ocaml run",
