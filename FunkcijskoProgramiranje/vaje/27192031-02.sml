@@ -105,6 +105,7 @@ fun isBST (tree: tree): bool =
     | NODE (n, t1, t2) => Option.valOf(max(t1))<n andalso Option.valOf(min(t2))>n andalso isBST(t1) andalso isBST(t2);
 
 (* TESTS *)
+(*
 use "unittest.sml";
 
 test("tests-toInt", [
@@ -203,6 +204,6 @@ test("tests-isBST", [
     assert(not (isBST(NODE(8, NODE(6, NODE (2, LEAF 1, NODE (4, LEAF 3, LEAF 5)), LEAF 7), NODE (11, NODE (10, LEAF 9, LEAF 9), LEAF 12))))),
     assert(not (isBST(NODE(2, LEAF 1, NODE(4, LEAF 3, NODE(6, LEAF 5, NODE (8, LEAF 10, LEAF 9)))))))
 ]);
-(*
 
-val _ = OS.Process.exit(OS.Process.success);*)
+val _ = OS.Process.exit(OS.Process.success);
+*)
