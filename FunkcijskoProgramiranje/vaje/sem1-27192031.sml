@@ -24,14 +24,10 @@ fun eval (xs:(''a*bool) list) (f: ''a expression) =
         | Not exp => not (eval xs exp)
         | Implies (a, b) => not (eval xs a) orelse (eval xs b)
         | Equiv (a, b) => (eval xs a) = (eval xs b)
-        | Or es => 
-            if null es
-            then false
-            else (eval xs (hd es)) orelse (eval xs (Or (tl es)))
-        | And es => 
-            if null es
-            then true
-            else (eval xs (hd es)) andalso (eval xs (And (tl es)))
+        | Or [] =>  false
+        | Or (y::ys) => (eval xs y) orelse (eval xs (Or ys))
+        | And [] => true
+        | And (y::ys) => (eval xs y) andalso (eval xs (And ys))
     end
 
 fun removeEmpty exp =
@@ -213,8 +209,9 @@ fun removeVars (Implies (p, q)) =
             | e => e (* Unused statement for type exhaustion *)    
     in
       case checkAll mapped of
-         And [] => True
-       | e => e
+        And [] => True
+        | And (x::[]) => x
+        | e => e
     end
     | removeVars (Or l) = 
     let
@@ -249,7 +246,8 @@ fun removeVars (Implies (p, q)) =
     in
       case checkAll mapped of
          Or [] => False
-       | e => e
+        | Or (x::[]) => x
+        | e => e
     end
     | removeVars (Not p) = Not (removeVars p)
     | removeVars e = e;
