@@ -1,4 +1,6 @@
 exception InvalidVariable;
+exception InsufficientVariables;
+Control.Print.printDepth := 100;
 
 datatype 'a expression = Not of 'a expression
                         | Or of 'a expression list
@@ -28,7 +30,7 @@ fun eval (xs:(''a*bool) list) (f: ''a expression) =
         | Or (y::ys) => (eval xs y) orelse (eval xs (Or ys))
         | And [] => true
         | And (y::ys) => (eval xs y) andalso (eval xs (And ys))
-    end
+    end ;
 
 fun removeEmpty exp =
     case exp of
@@ -252,7 +254,257 @@ fun removeVars (Implies (p, q)) =
     | removeVars (Not p) = Not (removeVars p)
     | removeVars e = e;
     
-fun simplify exp = removeEmpty (removeConstants (removeVars (pushNegations (exp))));
+fun simplify exp = (* Maybe improve together with removeVars*)
+    let
+        fun aux e = removeEmpty (removeConstants (removeVars (pushNegations (e))))
+    in
+        case exp of
+        Implies (a, b) => aux (Implies (simplify a, simplify b))
+        | Equiv (a, b) => aux (Equiv (simplify a, simplify b))
+        | And l => aux (And (map simplify l))
+        | Or l => aux (Or (map simplify l))
+        | Not e => aux (Not (simplify e))
+        | e => e
+    end ;
+
+fun exprToVarList expr =
+    case expr of
+    And [] => []
+    | And (x::xs) => (exprToVarList x) @ (exprToVarList (And(xs)))
+    | Or [] => []
+    | Or (x::xs) => (exprToVarList x) @ (exprToVarList (Or(xs)))
+    | Not x => exprToVarList x
+    | Implies (x,y) => (exprToVarList x) @ (exprToVarList y)
+    | Equiv (x,y) => (exprToVarList x) @ (exprToVarList y)
+    | Variable a => [a]
+    | _ => []
+
+fun tseytinTransformation _ True = True
+    | tseytinTransformation imena_spremenljivk logicna_formula = 
+    let
+        fun checkDuplicates [] varList  = []
+            | checkDuplicates (x::xs) varList = 
+            if (List.exists (fn y => x = y) xs) orelse (List.exists (fn y => x = y) varList)
+            then raise InvalidVariable
+            else (x::(checkDuplicates xs varList))
+        fun toTseytin [] (Variable a) = (Variable a, [], [])
+            | toTseytin [] expr = raise InsufficientVariables
+            | toTseytin (n::ns) True = (Variable n, ns, [Equiv(Variable n, True)])
+            | toTseytin (n::ns) False = (Variable n, ns, [Equiv(Variable n, False)])
+            | toTseytin l (Variable a) = (Variable a, l, [])
+            | toTseytin l (Not e) =
+                let
+                    val (v, lr, t) = toTseytin l e
+                in
+                    case lr of
+                    [] => raise InsufficientVariables
+                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Not(v)))::t)
+                end
+            | toTseytin l (Implies (a,b)) =
+                let
+                    val (v1, lr1, t1) = toTseytin l a
+                    val (v2, lr2, t2) = toTseytin lr1 b
+                in
+                    case lr2 of
+                    [] => raise InsufficientVariables
+                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Implies(v1, v2)))::(t2@t1))
+                end
+            | toTseytin l (Equiv (a,b)) =
+                let
+                    val (v1, lr1, t1) = toTseytin l a
+                    val (v2, lr2, t2) = toTseytin lr1 b
+                in
+                    case lr2 of
+                    [] => raise InsufficientVariables
+                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Equiv(v1, v2)))::(t2@t1))
+                end
+            | toTseytin l (And es) =
+                let
+                    fun transformAnd [] l = ([], l, [])
+                        | transformAnd es [] = raise InsufficientVariables
+                        | transformAnd (e::es) vs =
+                            let
+                                val (var, lr1, t) = toTseytin vs e
+                                val (vars, lr2, ts) = transformAnd es lr1
+                            in
+                                (var::vars, lr2, t@ts)
+                            end
+                in
+                    case (transformAnd es l) of
+                    (_, [], _) => raise InsufficientVariables
+                    | (vs, x::xs, t) => (Variable x, xs, (Equiv(Variable x, And vs))::t)
+                end
+            | toTseytin l (Or es) =
+                let
+                    fun transformOr [] l = ([], l, [])
+                        | transformOr es [] = raise InsufficientVariables
+                        | transformOr (e::es) vs =
+                            let
+                                val (var, lr1, t) = toTseytin vs e
+                                val (vars, lr2, ts) = transformOr es lr1
+                            in
+                                (var::vars, lr2, t@ts)
+                            end
+                in
+                    case (transformOr es l) of
+                    (_, [], _) => raise InsufficientVariables
+                    | (vs, x::xs, t) => (Variable x, xs, (Equiv(Variable x, Or vs))::t)
+                end
+        fun kno (Variable a) = [Variable a]
+            | kno (Equiv (Variable a, True)) = [Variable a]
+            | kno (Equiv (Variable a, False)) = [Not (Variable a)]
+            | kno (Equiv (Variable a, Not (Variable b))) = [Or [Variable a, Variable b],
+                                                            Or[Not(Variable a), Not (Variable b)]]
+            | kno (Equiv (Variable a, Equiv (Variable b, Variable c))) = [Or [Not (Variable a), Not (Variable b), Variable c],
+                                                                          Or [Not (Variable a), Variable b, Not (Variable c)],
+                                                                          Or [Variable a, Not (Variable b), Not (Variable c)],
+                                                                          Or [Variable a, Variable b, Variable c]]
+            | kno (Equiv (Variable a, Implies (Variable b, Variable c))) = [Or [Not (Variable a), Not (Variable b), Variable c],
+                                                                            Or [Variable a, Variable b],
+                                                                            Or [Variable a, Not (Variable c)]]
+            | kno (Equiv (Variable a, Or l)) = 
+                let
+                    fun other v []= []
+                        | other v (x::xs) = (Or [v, Not (x)])::(other v xs)
+                in
+                    (Or ((Not (Variable a))::l))::(other (Variable a) l)
+                end
+            | kno (Equiv (Variable a, And l)) = 
+                let
+                    fun other v []= []
+                        | other v (x::xs) = (Or [Not (v), x])::(other v xs)
+                in
+                    (Or ((Variable a)::(map (fn x => Not(x)) l)))::(other (Variable a) l)
+                end
+            | kno e = [e]
+    in
+        let
+            val (var, _, tsey) = toTseytin (checkDuplicates imena_spremenljivk (exprToVarList logicna_formula))
+                                (simplify logicna_formula)
+            fun glue [] = []
+                | glue (x::xs) = x@(glue xs)
+        in
+            simplify (And (glue (map kno (var::tsey))))
+        end
+    end ;
+
+fun SATsolver expr = 
+    let
+        fun findFree (And []) = []
+            | findFree (And(x::xs)) = 
+                (case x of
+                Variable a => (a, true)::(findFree (And xs))
+                | Or [Variable a] => (a, true)::(findFree (And xs))
+                | Or [Not(Variable a)] => (a, false)::(findFree (And xs))
+                | _ => findFree (And xs))
+            | findFree _ = []
+
+        fun checkFree ([]) = SOME []
+            | checkFree ((x,b)::xs) =
+                let
+                    val same = List.exists (fn (x1,b1) => x = x1 andalso b = b1) xs
+                    val dif = List.exists (fn (x1,b1) => x = x1 andalso b = (not b1)) xs
+                in
+                    case (same, dif) of
+                    (_, true) => NONE
+                    | (false, false) => 
+                        (
+                            case checkFree xs of
+                            NONE => NONE
+                            | SOME e => SOME ((x,b)::e)
+                        )
+                    | (true, false) => 
+                        (
+                            case checkFree xs of
+                            NONE => NONE
+                            | SOME e => SOME (e)
+                        )
+                end
+
+        fun changeVar [] a = a
+            | changeVar ((a,var)::vs) (Variable b) =
+                if a = b
+                then (
+                    if var
+                    then True
+                    else False)
+                else changeVar vs (Variable b) 
+
+        fun simplifyExpr vars expr = 
+            case expr of
+            And l => simplify (And (map (simplifyExpr vars) l))
+            | Or l => simplify (Or (map (simplifyExpr vars) l))
+            | Not e => simplify (Not (simplifyExpr vars e))
+            | Variable a => changeVar vars (Variable a)
+            | e => simplify e
+
+        fun findVar (Variable a) = SOME a
+            | findVar (And (x::xs)) =
+                (case findVar x of
+                NONE => findVar (And xs)
+                | e => e)
+            | findVar (Or (x::xs)) =
+                (case findVar x of
+                NONE => findVar (Or xs)
+                | e => e)
+            | findVar (Not a) = findVar a    
+            | findVar e = NONE
+
+        exception NoVariables
+
+        fun stepOne expr = 
+        let
+            fun stepThree expr = 
+            let
+                val var = (case findVar expr of
+                           NONE => raise NoVariables
+                           | SOME a => a)
+
+            in
+                case stepOne (simplifyExpr [(var, true)] expr) of
+                SOME a => SOME ((var,true)::a)
+                | NONE => (
+                    case stepOne (simplifyExpr [(var, false)] expr) of
+                    NONE => NONE
+                    | SOME a => SOME ((var,false)::a)
+                )
+            end
+
+            fun stepTwo True = (SOME [])
+            | stepTwo False = NONE
+            | stepTwo (And[]) = (SOME [])
+            | stepTwo (Or []) = NONE
+            | stepTwo e = stepThree e
+
+            val checked = checkFree (findFree expr)
+        in
+            case checked of
+            NONE => NONE
+            | SOME [] => stepTwo expr
+            | SOME a => 
+                let
+                    val res = stepOne (simplifyExpr a expr)
+                in
+                    if Option.isSome(res)
+                    then (SOME (a @ (Option.valOf (res))))
+                    else NONE
+                end
+        end
+    in
+        stepOne expr
+    end ;
+
+(* not(equiv(a,b)) = ((not a) or (not b)) and (a or b)
+fun equivalentExpressions e1 e2 =
+    let
+        fun negate 
+    in
+      body
+    end
+    if Option.isSome(SATsolver (And))
+    then false
+    else true;*)
+
 (* TESTS *)
 
 use "unittest.sml";
@@ -393,7 +645,8 @@ test("test-removeVars", [
     assert_equal (removeVars, (And [Variable 1, Variable 2, Not (Variable 1), True]), False)
 ]);
 
-val a = removeVars (Or[Variable 1,Variable 1, True]);
+val a = tseytinTransformation ["x4","x3","x2","x1"] (Implies(And [Or [Variable "p", Variable "q"], Variable "r"], Not (Variable "s")));
 
+val b = SATsolver a
 
 (*val _ = OS.Process.exit(OS.Process.success);*)
