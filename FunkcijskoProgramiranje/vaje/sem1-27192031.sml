@@ -494,16 +494,39 @@ fun SATsolver expr =
         stepOne expr
     end ;
 
-(* not(equiv(a,b)) = ((not a) or (not b)) and (a or b)
+(*not(equiv(a,b)) = ((not a) or (not b)) and (a or b)*)
 fun equivalentExpressions e1 e2 =
     let
-        fun negate 
+        fun leftPairs [] = []
+            | leftPairs (x::xs) = 
+                (case x of 
+                Variable a => map (fn y => (Not (Variable a))::y) (leftPairs xs)
+                | Or l => 
+                    let
+                        val lp = leftPairs xs
+                    in
+                        foldr (fn (i,j) => (map (fn y => ((Not i)::y)) lp)@j) [] l
+                    end
+                | e => [])
+
+        fun leftSide (And l1) (And l2) = map (fn x => Or x) (leftPairs (l1@l2))
+            | leftSide a b = [a, b]
+
+        fun insideTransform (Variable a) (Variable b) = Or [(Variable a),(Variable b)]
+            | insideTransform (Variable a) (Or l) = Or ((Variable a)::l)
+            | insideTransform (Or l) (Variable a) = Or (l@[Variable a])
+            | insideTransform (Or l1) (Or l2) = Or (l1@l2)
+            | insideTransform e f = Or [e,f]
+
+        fun allPairs (And []) _ = []
+            | allPairs (And (x::xs)) (And ys) = (map (insideTransform x) ys) @ (allPairs (And xs) (And ys))
+            | allPairs _ _ = []
     in
-      body
-    end
-    if Option.isSome(SATsolver (And))
-    then false
-    else true;*)
+        And ((leftSide e1 e2))
+        (*if Option.isSome(SATsolver (And))
+        then false
+        else true;*)
+    end;
 
 (* TESTS *)
 
@@ -647,6 +670,6 @@ test("test-removeVars", [
 
 val a = tseytinTransformation ["x4","x3","x2","x1"] (Implies(And [Or [Variable "p", Variable "q"], Variable "r"], Not (Variable "s")));
 
-val b = SATsolver a
+val b = equivalentExpressions a a
 
 (*val _ = OS.Process.exit(OS.Process.success);*)

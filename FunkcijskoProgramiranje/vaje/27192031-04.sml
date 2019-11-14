@@ -39,7 +39,7 @@ fun longestString (xs: string list): string = bestString ((fn (x,y) => (String.s
 (* Seznam uredi naraščajoče z algoritmom quicksort. *)
 (* Sorts the list with quicksort. *)
 fun quicksort ([]: int list): int list = []
-    | quicksort (x::xs) = (quicksort (List.filter (fn z => z<x) xs)) @ (x::(quicksort (List.filter (fn z => z>x) xs)));
+    | quicksort (x::xs) = (quicksort (List.filter (fn z => z<x) xs)) @ (List.filter (fn z => z=x) (x::xs)) @(quicksort (List.filter (fn z => z>x) xs));
 
 (* Vrne skalarni produkt dveh vektorjev.
    Uporabite List.foldl in ListPair.map. *)
@@ -127,7 +127,8 @@ test("test-longestString", [
 test("test-quicksort", [
     assert_equal(quicksort,[], []),
     assert_equal(quicksort,[1], [1]),
-    assert_equal(quicksort,[8,7,3,5,4,1,2,9,6], [1,2,3,4,5,6,7,8,9])
+    assert_equal(quicksort,[8,7,3,5,4,1,2,9,6], [1,2,3,4,5,6,7,8,9]),
+    assert_eq(quicksort [2,3,4,6,9,1,5,8,2,2,5,4], [1,2,2,2,3,4,4,5,5,6,8,9])
 ]);
 
 test("test-dot", [
