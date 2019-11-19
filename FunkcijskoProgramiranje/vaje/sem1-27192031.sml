@@ -287,6 +287,7 @@ fun tseytinTransformation _ True = True
             if (List.exists (fn y => x = y) xs) orelse (List.exists (fn y => x = y) varList)
             then raise InvalidVariable
             else (x::(checkDuplicates xs varList))
+
         fun toTseytin [] (Variable a) = (Variable a, [], [])
             | toTseytin [] expr = raise InsufficientVariables
             | toTseytin (n::ns) True = (Variable n, ns, [Equiv(Variable n, True)])
@@ -307,7 +308,7 @@ fun tseytinTransformation _ True = True
                 in
                     case lr2 of
                     [] => raise InsufficientVariables
-                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Implies(v1, v2)))::(t2@t1))
+                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Implies(v1, v2)))::(t1@t2))
                 end
             | toTseytin l (Equiv (a,b)) =
                 let
@@ -316,7 +317,7 @@ fun tseytinTransformation _ True = True
                 in
                     case lr2 of
                     [] => raise InsufficientVariables
-                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Equiv(v1, v2)))::(t2@t1))
+                    | (x::xs) => (Variable x, xs, (Equiv (Variable x, Equiv(v1, v2)))::(t1@t2))
                 end
             | toTseytin l (And es) =
                 let
@@ -353,8 +354,8 @@ fun tseytinTransformation _ True = True
         fun kno (Variable a) = [Variable a]
             | kno (Equiv (Variable a, True)) = [Variable a]
             | kno (Equiv (Variable a, False)) = [Not (Variable a)]
-            | kno (Equiv (Variable a, Not (Variable b))) = [Or [Variable a, Variable b],
-                                                            Or[Not(Variable a), Not (Variable b)]]
+            | kno (Equiv (Variable a, Not (Variable b))) = [Or[Not(Variable a), Not (Variable b)],
+                                                            Or [Variable a, Variable b]]
             | kno (Equiv (Variable a, Equiv (Variable b, Variable c))) = [Or [Not (Variable a), Not (Variable b), Variable c],
                                                                           Or [Not (Variable a), Variable b, Not (Variable c)],
                                                                           Or [Variable a, Not (Variable b), Not (Variable c)],
@@ -494,38 +495,54 @@ fun SATsolver expr =
         stepOne expr
     end ;
 
+fun aExpToIntExp expr n = 
+    let
+        fun rmDup [] = []
+            | rmDup (x::xs) = 
+                if List.exists (fn y => y=x) xs 
+                then rmDup xs
+                else x::(rmDup xs)
+        
+        fun changeVal [] n = ([], n)
+            | changeVal (x::xs) n = 
+                let
+                    val (s, num) = changeVal xs (n+1)
+                in
+                    ((x,n)::s, num)
+                end
+        fun transformExpr (vars : (''a *int) list) (Variable a) = Variable (#2 (hd (List.filter (fn x => (#1 x)=a) vars)))
+            | transformExpr vars (Not a) = Not (transformExpr vars a)
+            | transformExpr vars (Or l) = Or (map (transformExpr vars) l)
+            | transformExpr vars (And l) = And (map (transformExpr vars) l)
+            | transformExpr vars (Implies (a, b)) = Implies (transformExpr vars a, transformExpr vars b)
+            | transformExpr vars (Equiv (a, b)) = Equiv (transformExpr vars a, transformExpr vars b)
+            | transformExpr vars True = True
+            | transformExpr vars False = False
+
+        val (l, nn) = changeVal (rmDup (exprToVarList expr)) n
+    in
+        (transformExpr l expr, nn)
+    end;
+
+
 (*not(equiv(a,b)) = ((not a) or (not b)) and (a or b)*)
 fun equivalentExpressions e1 e2 =
     let
-        fun leftPairs [] = []
-            | leftPairs (x::xs) = 
-                (case x of 
-                Variable a => map (fn y => (Not (Variable a))::y) (leftPairs xs)
-                | Or l => 
-                    let
-                        val lp = leftPairs xs
-                    in
-                        foldr (fn (i,j) => (map (fn y => ((Not i)::y)) lp)@j) [] l
-                    end
-                | e => [])
+        fun count True = 1
+            | count False = 1
+            | count (Not a) = (count a) + 1
+            | count (Variable a) = 1
+            | count (Implies (a,b)) = (count a) + (count b) + 1
+            | count (Equiv (a,b)) = (count a) + (count b) + 1
+            | count (And l) = (foldl (fn (x,y) => (count x) + y) 0 l) + 1
+            | count (Or l) = (foldl (fn (x,y) => (count x) + y) 0 l) + 1
 
-        fun leftSide (And l1) (And l2) = map (fn x => Or x) (leftPairs (l1@l2))
-            | leftSide a b = [a, b]
-
-        fun insideTransform (Variable a) (Variable b) = Or [(Variable a),(Variable b)]
-            | insideTransform (Variable a) (Or l) = Or ((Variable a)::l)
-            | insideTransform (Or l) (Variable a) = Or (l@[Variable a])
-            | insideTransform (Or l1) (Or l2) = Or (l1@l2)
-            | insideTransform e f = Or [e,f]
-
-        fun allPairs (And []) _ = []
-            | allPairs (And (x::xs)) (And ys) = (map (insideTransform x) ys) @ (allPairs (And xs) (And ys))
-            | allPairs _ _ = []
+        fun createVarList 0 n = [n]
+            | createVarList n1 n2 = n2::(createVarList (n1-1) (n2+1))
+        val (e, n) = aExpToIntExp (Not(Equiv(e1,e2))) 0
+        val s = tseytinTransformation (createVarList (count e) n) e
     in
-        And ((leftSide e1 e2))
-        (*if Option.isSome(SATsolver (And))
-        then false
-        else true;*)
+        not (Option.isSome(SATsolver s))
     end;
 
 (* TESTS *)
@@ -668,8 +685,8 @@ test("test-removeVars", [
     assert_equal (removeVars, (And [Variable 1, Variable 2, Not (Variable 1), True]), False)
 ]);
 
-val a = tseytinTransformation ["x4","x3","x2","x1"] (Implies(And [Or [Variable "p", Variable "q"], Variable "r"], Not (Variable "s")));
-
+val a = tseytinTransformation ["x2","x3","x1","x4"] (Implies(And [Or [Variable "p", Variable "q"], Variable "r"], Not (Variable "s")));
+val d = tseytinTransformation [3,4,5,6,7,8,9] (Not(Equiv(Variable 1, Variable 2)))
 val b = equivalentExpressions a a
-
+val c = aExpToIntExp a 0
 (*val _ = OS.Process.exit(OS.Process.success);*)
