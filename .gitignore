@@ -1,7 +1,7 @@
-FunkcijskoProgramiranje/predavanja/P02_Podatkovni_tipi,okolje,opcije.pdf
-FunkcijskoProgramiranje/predavanja/P01_Uvod,funkcijsko_programiranje.pdf
+FunkcijskoProgramiranje/predavanja/*.pdf
 sml.json
 node_modules/.lsp/debug.log
 ObdelavaBiomedicinskihSignalovInSlik/seminarska1/*.asc
 ObdelavaBiomedicinskihSignalovInSlik/seminarska1/*.mat
 ObdelavaBiomedicinskihSignalovInSlik/predavanja/*.pdf
+FunkcijskoProgramiranje/predavanja/P05_map-filter-fold,doseg,currying.pdf
