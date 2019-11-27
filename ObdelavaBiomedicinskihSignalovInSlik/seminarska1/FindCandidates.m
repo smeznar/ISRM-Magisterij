@@ -11,12 +11,12 @@ function [samples, score] = FindCandidates(Signal, Filtered, Fs)
     end
     [gc, gn] = groupcounts(maxes');
     samples = gn(gc>interval/2)';
-    for i = 1:length(samples)
-       mask = samples(abs(samples-samples(i))<interval);
-       [a,b] = max(hF(mask));
-       samples(i) = mask(b);
-    end
-    samples = unique(samples);
-    scatter(samples, zeros(1,size(samples,2)));
-    hold on; plot(Signal);
+    %for i = 1:length(samples)
+    %   mask = samples(abs(samples-samples(i))<interval);
+    %   [a,b] = max(hF(mask));
+    %   samples(i) = mask(b);
+    %end
+    %samples = unique(samples);
+    %scatter(samples, zeros(1,size(samples,2)));
+    %hold on; plot(Signal);
 end

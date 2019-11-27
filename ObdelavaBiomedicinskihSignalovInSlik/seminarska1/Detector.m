@@ -5,12 +5,11 @@ function Detector( record )
   % wfdb2mat -r record
 
   fileName = sprintf('%sm.mat', record);
+  Fs = 360;
   t=cputime();
-  m=7;
-  normalizeConst=32;
-  idx = QRSDetect(fileName,m, normalizeConst);
+  idx = QRSDetect(fileName, Fs);
   fprintf('Running time: %f\n', cputime() - t);
-  asciName = sprintf('%s.asc',record);
+  asciName = sprintf('%s.det',record);
   fid = fopen(asciName, 'wt');
   for i=1:size(idx,2)
       fprintf(fid,'0:00:00.00 %d N 0 0 0\n', idx(1,i) );
