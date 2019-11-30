@@ -40,12 +40,10 @@ fun removeEmpty exp =
         | Or [] => False
         | Or (x::[]) => removeEmpty x
         | Or l => Or (map removeEmpty l)
-        | False => False
-        | True => True
-        | Variable a => Variable a
         | Not a => Not (removeEmpty a)
         | Implies (a, b) => Implies (removeEmpty a, removeEmpty b)
-        | Equiv (a, b) => Equiv (removeEmpty a, removeEmpty b);
+        | Equiv (a, b) => Equiv (removeEmpty a, removeEmpty b)
+        | e => e;
 
 fun removeConstants (Not e) = 
     let
@@ -389,8 +387,10 @@ fun tseytinTransformation _ True = True
         end
     end ;
 
-fun SATsolver expr = 
+fun SATsolver expr newVariableList = 
     let
+        fun checkIfKno e = true
+
         fun findFree (And []) = []
             | findFree (And(x::xs)) = 
                 (case x of
@@ -492,7 +492,9 @@ fun SATsolver expr =
                 end
         end
     in
-        stepOne expr
+        if checkIfKno expr
+        then stepOne expr
+        else stepOne (tseytinTransformation newVariableList expr)
     end ;
 
 fun aExpToIntExp expr n = 
@@ -542,7 +544,7 @@ fun equivalentExpressions e1 e2 =
         val (e, n) = aExpToIntExp (Not(Equiv(e1,e2))) 0
         val s = tseytinTransformation (createVarList (count e) n) e
     in
-        not (Option.isSome(SATsolver s))
+        not (Option.isSome(SATsolver s []))
     end;
 
 (* TESTS *)
@@ -689,4 +691,5 @@ val a = tseytinTransformation ["x2","x3","x1","x4"] (Implies(And [Or [Variable "
 val d = tseytinTransformation [3,4,5,6,7,8,9] (Not(Equiv(Variable 1, Variable 2)))
 val b = equivalentExpressions a a
 val c = aExpToIntExp a 0
+val e = simplify (And[Implies(Variable 2,Not (Variable 2)),Equiv(Not False,Variable 2)]);
 (*val _ = OS.Process.exit(OS.Process.success);*)

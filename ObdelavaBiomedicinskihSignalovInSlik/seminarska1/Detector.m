@@ -5,7 +5,7 @@ function Detector( record )
   % wfdb2mat -r record
 
   fileName = sprintf('%sm.mat', record);
-  Fs = 360;
+  Fs = 250;
   t=cputime();
   idx = QRSDetect(fileName, Fs);
   fprintf('Running time: %f\n', cputime() - t);

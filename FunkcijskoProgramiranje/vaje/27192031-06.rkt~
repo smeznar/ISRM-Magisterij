@@ -1,6 +1,6 @@
 #lang racket
-(define (power x n)
-  (if  (= n 0) 1 (* x (power x (- n 1)))))
+(define (potenca x n)
+  (if  (= n 0) 1 (* x (potenca x (- n 1)))))
 
 (define (gcd a b)
   (if (= b 0) a (gcd b (modulo a b))))
@@ -41,7 +41,7 @@
       (append (list a) (range (+ a s) b s))))
 
 (define (is-palindrome l)
-  (letrec ([aux (lambda (l1 l2) (
+  (letrec ([aux (λ (l1 l2) (
                         if (null? l1) #t (and (= (car l1) (car l2) ) (aux (cdr l1) (cdr l2)))))])
     (aux l (reverse l))))
 
@@ -54,7 +54,7 @@
                            (if (equal? (car l1) (car l2)) (aux (cdr l1) (cdr l2) (+ n 1)) (string-append " ERROR at " (~v n)))))])
     (string-append "test: " name (aux l1 l2 1))))
 
-(test "power" (list (power 1 0) (power 1 5) (power 5 0) (power 5 3) (power 2 8)) '(1 1 1 125 256))
+(test "potenca" (list (potenca 1 0) (potenca 1 5) (potenca 5 0) (potenca 5 3) (potenca 2 8)) '(1 1 1 125 256))
 
 (test "gcd" (list (gcd 5 12) (gcd 8 16) (gcd 1 9485) (gcd 15 10) (gcd 125 5)) '(1 8 1 5 5))
 
