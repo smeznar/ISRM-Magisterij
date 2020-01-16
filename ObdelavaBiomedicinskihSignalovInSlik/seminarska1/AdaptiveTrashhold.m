@@ -1,4 +1,4 @@
-function [idx] = AdaptiveTrashhold(Candidates, Score, Fs)
+function [idx] = AdaptiveTrashhold(Candidates, Score)
     W1T = -100000;
     beta1 = 0.6;
     beta2 = 0.5;

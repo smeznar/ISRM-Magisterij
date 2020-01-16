@@ -1,0 +1,75 @@
+2.h (65 %) Detecting contours of human organs in 3D CT images using the
+    Canny edge detector (hint: link edges between image slices
+    using 24-connectivity)
+
+The image files, located in individual sub-folders of each patient of the 
+CTMRI DB, show a certain part of the patient's body. Your task is to write 
+a program for detecting contours of human organs in the 3D CT images from 
+the CTMRI DB using the Canny edge detector. To fully complete the 
+assignment you have to satisfy several requirements. The program has to 
+accept the list of names of consecutive (neighboring) CT images from a 
+sub-folder containing images of a certain part of the body of a patient 
+(.png files of the database) as a parameter. The program has to detect 
+edges in each image using the Canny edge detector. You have to determine 
+both thresholds of the detector empirically. Then, the program has to 
+perform edge linking in each image containing detected edges. 
+(Instruction: during edge linking there is no need to calculate the 
+gradient magnitude and angle arrays.) Finally, the program has to perform 
+edge linking between consecutive images containing linked edges. 
+(Instruction: link the edges between consecutive images using the 
+24-connectivity.) The output of the program is a sequence of binarized 
+images after edge linking between consecutive images. Store the binarized 
+output images into the .png files. The program has to display the sequence 
+of the original images, the sequence of the images after edge linking and 
+the sequence of the final images after edge linking between consecutive 
+images. The program has to be tested using a sequence of at least 10 
+consecutive images of a certain part of the body of a patient from the 
+CTMRI DB. Your discussions and conclusions regarding the use of the Canny 
+edge detector for the task of edge detection in the 3D CT images have to be
+submitted in a text (.txt) file. The .txt file together with the source of 
+your program has to be submitted during uploading the assignment. For 
+24-connectivity see below.
+
+How we defined the 24-connectivity?
+
+The 24-connectivity is a process of edge linking between two consecutive 2D
+images within 3D image recording (a 3D image recording is a set of 2D 
+images one next to the other representing slices of the 3D image 
+recording). We have a sequence of M consecutive images after edge detection 
+and binarization, between which we want to link edges. We link edges 
+between two consecutive images, i.e., image n and image n+1, for each n 
+between 1 and M-1. Process of edge linking between two consecutive images 
+(n and n+1) as follows:
+    1. Select previously unselected pixel p(x,y) with the value of 1 in the 
+       image n after edge detection and binarization (value of 0 represents 
+       black colour, while value of 1 represents white colour).
+    2. Check the value of the pixel at the coordinates (x,y) in the image 
+       n+1. If the value of this pixel is 1, return to step 1; otherwise,
+       continue to step 3.
+    3. Check the values of the pixels in the image n+1 in the 3x3 
+       neighborhood (8-adjacency) surrounded the pixel at the coordinates 
+       (x,y) in the image n. If at least one pixel in the image n+1 exists 
+       with the value of 1 in this neighborhood, return to step 1; 
+       otherwise, continue to step 4.
+    4. Check the values of the pixels in the image n+1 in the 5x5 
+       neighborhood surrounded the pixel at the coordinates (x,y) in the 
+       image n. If all the pixels in the image n+1 in this neighborhood 
+       have the value of 0, return to step 1; otherwise, continue to step 5.
+    5. Link each of the pixels with the value of 1 in the 5x5 neighborhood
+       in the image n+1 with the pixel at the coordinates (x,y) in the 
+       image n. Each of the pixels in the image n+1, which have to be 
+       linked, has the coordinates of the form (x+a, y+b), where the values 
+       of a and b can be from -2 to 2. To link the pixel at the coordinates 
+       (x+a, y+b) in the image n+1 with the pixel at the coordinates (x,y) 
+       in the image n, we have to follow the shortest path in the image n+1 
+       from the coordinates (x+a,y+b) to the coordinates (x,y) and set the 
+       values of all visited pixels to 1. We follow the shortest path by 
+       converging the values of a and b to the value of 0 (in each step the 
+       values of a and b are increased or decreased by 1 to converge to 0; 
+       or stay unchanged if the values are already 0). Example: from the 
+       coordinates (x+2,y-1) we converge to the coordinates (x,y) by first 
+       decreasing the a by 1 and increasing the b by 1 (to get to the 
+       coordinates (x+1,y)), and then decreasing the a by 1 and leaving the 
+       b unchanged since the value of the b is already 0 (to get to the 
+       coordinates (x,y)). If all pixels with the value of 1 in the image n 
+       have been visited, terminate; otherwise, continue to step 1.

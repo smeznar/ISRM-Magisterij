@@ -4,11 +4,14 @@ a = -1;
 b = 1;
 f = @(x) abs(x).*sin(2.*exp(1.5.*x)-1);
 mn = [-1,-0.6,-0.2,0.2,0.6,1];
-g1{1} = @(x) x.^4;
-g1{2} = @(x) x.^3;
-g1{3} = @(x) x.^2;
-g1{4} = @(x) x;
-g1{5} = @(x) 1;
+for i = 1:5
+   g1{i} = @(x) x.^(i-1); 
+end
+%g1{1} = @(x) x.^4;
+%g1{2} = @(x) x.^3;
+%g1{3} = @(x) x.^2;
+%g1{4} = @(x) x;
+%g1{5} = @(x) 1;
 
 fprintf('Priblizek za polinom najboljse enakomerne aproksimacije za f:\n');
 interval = linspace(a,b,1001);
@@ -28,12 +31,16 @@ for i = 1:5
 end
 fprintf('Ocena napake aproksimacije: %f\n\n', p4(i));
 
-
-g2{1} = @(x) sin(2*x);
-g2{2} = @(x) cos(2*x);
-g2{3} = @(x) sin(x);
-g2{4} = @(x) cos(x);
-g2{5} = @(x) 1;
+g2{1} = @(x) 1;
+for i = 1:2
+   g2{2*i} = @(x) cos(i.*x); 
+   g2{2*i+1} = @(x) sin(i.*x); 
+end
+%g2{1} = @(x) sin(2*x);
+%g2{2} = @(x) cos(2*x);
+%g2{3} = @(x) sin(x);
+%g2{4} = @(x) cos(x);
+%g2{5} = @(x) 1;
 
 p2 = zeros(1,5);
 u2 = zeros(1,5);

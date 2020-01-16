@@ -8,6 +8,6 @@ function [idx] = QRSDetect(fileName, Fs)
   sig = sig((n + 1):size(sig,2));
   filtered = HarFilter (sig, Fs);
   [candidates, score] = FindCandidates(sig, filtered, Fs);
-  candidates = AdaptiveTrashhold(candidates,score, Fs);
+  candidates = AdaptiveTrashhold(candidates,score);
   idx = RemoveNoise(candidates,sig,Fs);
 end

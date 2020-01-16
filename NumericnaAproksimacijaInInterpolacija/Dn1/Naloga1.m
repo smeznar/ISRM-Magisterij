@@ -48,6 +48,7 @@ for k = 1:10
     ani(k) = norm(ys1-OperatorI(f1,2*k, interval),'inf');
     anb(k) = norm(f1(interval)-bp(interval),'inf');
 end
+
 bnb = zeros(1,10);
 bni = zeros(1,10);
 ys2 = f2(interval);
